@@ -1,19 +1,10 @@
-import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics.pairwise import linear_kernel, cosine_similarity
 import spotipy
-import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import spotipy.util as util
-from pathlib import Path
 import pandas as pd
 import numpy as np
-from collections import Counter
-from operator import itemgetter
-from heapq import nlargest
-
-
-##imports
 
 
 def authenticate(redirect_uri, client_cred_manager, username, scope, client_id, client_secret):
@@ -120,8 +111,8 @@ def create_df_recommendations(api_results):
 
 def create_df_playlist(api_results, sp=None, append_audio=True):
     df = create_df_saved_songs(api_results["tracks"])
-    if append_audio == True:
-        assert sp != None, "sp needs to be specified for appending audio features"
+    if append_audio:
+        assert sp is not None, "sp needs to be specified for appending audio features"
         df = append_audio_features(df, sp)
     return df
 
@@ -137,15 +128,15 @@ def append_audio_features(df, spotify_auth, return_feat_df=False):
     assert len(audio_features) == len(df["track_id"][:])
     feature_cols = list(audio_features[0].keys())[:-7]
     features_list = []
-    for features in audio_features:
+    for feats in audio_features:
         try:
-            song_features = [features[col] for col in feature_cols]
+            song_features = [feats[col] for col in feature_cols]
             features_list.append(song_features)
         except TypeError:
             pass
     df_features = pd.DataFrame(features_list, columns=feature_cols)
     df = pd.concat([df, df_features], axis=1)
-    if return_feat_df == False:
+    if not return_feat_df:
         return df
     else:
         return df, df_features
@@ -183,12 +174,12 @@ def create_similarity_score(df1, df2, similarity_score="cosine_sim"):
 
 
 def filter_with_meansong(mean_song, recommendations_df, n_recommendations=10):
-    features = list(mean_song.columns[6:])
-    features.remove("key")
-    features.remove("mode")
-    mean_song_feat = mean_song[features].values
+    feats = list(mean_song.columns[6:])
+    feats.remove("key")
+    feats.remove("mode")
+    mean_song_feat = mean_song[feats].values
     mean_song_scaled = MinMaxScaler().fit_transform(mean_song_feat.reshape(-1, 1))
-    recommendations_df_scaled = MinMaxScaler().fit_transform(recommendations_df[features])
+    recommendations_df_scaled = MinMaxScaler().fit_transform(recommendations_df[feats])
     mean_song_scaled = mean_song_scaled.reshape(1, -1)
     sim_mean_finrecomms = cosine_similarity(mean_song_scaled, recommendations_df_scaled)[0][:]
     indices = (-sim_mean_finrecomms).argsort()[:n_recommendations]
@@ -200,14 +191,16 @@ def feature_filter(df, feature, high=True):
     assert feature in ["speechiness",
                        "acousticness",
                        "instrumentalness",
-                       "liveness"], "feature must be one of the following: speechiness,acousticness,instrumentalness,liveness"
+                       "liveness"], \
+        "Feature must be one of the following: Speechiness, Acousticness, Instrumentalness, Liveness"
+
     # more features may be added
-    x = 0.9 if high == True else 0.1
-    df = df[df[feature] > x] if high == True else df[df[feature] < x]
+    x = 0.9 if high is True else 0.1
+    df = df[df[feature] > x] if high is True else df[df[feature] < x]
     return df
 
 
-####still a work in progress
+# TODO: WIP
 def get_recommendations(df, song_title, similarity_score, num_recommends=5):
     indices = pd.Series(df.index, index=df['track_name']).drop_duplicates()
     idx = indices[song_title]
@@ -219,7 +212,6 @@ def get_recommendations(df, song_title, similarity_score, num_recommends=5):
 
 
 def get_dfs2(sp):
-    ##queries
     # user top tracks
     top_tracks_short = sp.current_user_top_tracks(limit=50, offset=0, time_range='short_term')
     top_tracks_1ed = sp.current_user_top_tracks(limit=50, offset=0, time_range='medium_term')
@@ -254,7 +246,6 @@ def get_dfs2(sp):
 
 
 def get_dfs(sp):
-    ##queries
     # user top tracks
     top_tracks_short = sp.current_user_top_tracks(limit=50, offset=0, time_range='short_term')
     top_tracks_1ed = sp.current_user_top_tracks(limit=50, offset=0, time_range='medium_term')
@@ -288,81 +279,85 @@ def get_dfs(sp):
     return top_tracks_df, artists_df, saved_tracks_df
 
 
-client_id = "2cbda720019447bb8841a09360cd422d"
-client_secret = "51f6f2ae04dd4b57ae64f961d1556a5d"
-username = "EthanHunt2125"
-redirect_uri = "https://developer.spotify.com/dashboard/applications/2cbda720019447bb8841a09360cd422d"
-client_credentials_manager = SpotifyClientCredentials(client_id=client_id,
-                                                      client_secret=client_secret)
-scope = "user-library-read user-read-recently-played user-top-read playlist-modify-public playlist-read-private playlist-read-collaborative"
-sp = authenticate(redirect_uri, client_credentials_manager, username, scope, client_id, client_secret)
-playlist_uri = input("Please paste in the URI of the playlist you wish to add songs to   ")
-playlist = sp.playlist(playlist_uri)
-playlist_df = create_df_playlist(playlist, sp=sp)
+if __name__ == "__main__":
+    client_id = "2cbda720019447bb8841a09360cd422d"
+    client_secret = "51f6f2ae04dd4b57ae64f961d1556a5d"
+    username = "EthanHunt2125"
+    redirect_uri = "https://developer.spotify.com/dashboard/applications/2cbda720019447bb8841a09360cd422d"
+    client_credentials_manager = SpotifyClientCredentials(client_id=client_id,
+                                                          client_secret=client_secret)
+    scope = "user-library-read user-read-recently-played user-top-read playlist-modify-public playlist-read-private playlist-read-collaborative"
+    sp = authenticate(redirect_uri, client_credentials_manager, username, scope, client_id, client_secret)
+    playlist_uri = input("Please paste in the URI of the playlist you wish to add songs to   ")
+    playlist = sp.playlist(playlist_uri)
+    playlist_df = create_df_playlist(playlist, sp=sp)
 
-# create mean_song
-mean_song = pd.DataFrame(columns=playlist_df.columns)
-mean_song.loc["mean"] = playlist_df.mean()
+    # create mean_song
+    mean_song = pd.DataFrame(columns=playlist_df.columns)
+    mean_song.loc["mean"] = playlist_df.mean()
 
-# get seed tracks for recommendations
-seed_tracks = playlist_df["track_id"].tolist()
-# create recommendation df
-recomm_dfs = []
-for i in range(5, len(seed_tracks) + 1, 5):
-    recomms = sp.recommendations(seed_tracks=seed_tracks[i - 5:i],
-                                 limit=25)  # limit could be modified to get more or less recommendations per song in the org. playlist
-    recomms_df = append_audio_features(create_df_recommendations(recomms), sp)
-    recomm_dfs.append(recomms_df)
-recomms_df = pd.concat(recomm_dfs)
-recomms_df.reset_index(drop=True, inplace=True)
+    # get seed tracks for recommendations
+    seed_tracks = playlist_df["track_id"].tolist()
+    # create recommendation df
+    recomm_dfs = []
+    for i in range(5, len(seed_tracks) + 1, 5):
+        # Limit could be modified to get more or less recommendations per song in the original playlist
+        recomms = sp.recommendations(seed_tracks=seed_tracks[i - 5:i],
+                                     limit=25)
+        recomms_df = append_audio_features(create_df_recommendations(recomms), sp)
+        recomm_dfs.append(recomms_df)
+    recomms_df = pd.concat(recomm_dfs)
+    recomms_df.reset_index(drop=True, inplace=True)
 
-# create similarity scoring between playlist and recommendations
-similarity_score = create_similarity_score(playlist_df, recomms_df)
-while True:
-    # get a filtered recommendations df
-    final_recomms = recomms_df.iloc[[np.argmax(i) for i in similarity_score]]  # get indeces of most similar songs
-    final_recomms = final_recomms.drop_duplicates()
-    # filter again so tracks are not already in playlist_df
-    final_recomms = final_recomms[~final_recomms["track_name"].isin(playlist_df["track_name"])]
-    final_recomms.reset_index(drop=True, inplace=True)
+    # create similarity scoring between playlist and recommendations
+    similarity_score = create_similarity_score(playlist_df, recomms_df)
+    while True:
+        # get a filtered recommendations df
+        final_recomms = recomms_df.iloc[[np.argmax(i) for i in similarity_score]]  # get indeces of most similar songs
+        final_recomms = final_recomms.drop_duplicates()
+        # filter again so tracks are not already in playlist_df
+        final_recomms = final_recomms[~final_recomms["track_name"].isin(playlist_df["track_name"])]
+        final_recomms.reset_index(drop=True, inplace=True)
 
-    # manual filtering by audio feature
-    manual_filter = input(
-        "Do you wish to filter the recommendations manually by setting one of the following audio features very high or very low: speechiness, acousticness, instrumentalness, liveness [y/n]").lower()
-    if manual_filter == "y":
-        features = input(
-            "Which features would you like to filter by? (Not more than 1-2 recommended) [e.g. speechiness,liveness]").split(
-            ",")
-        assert isinstance(features, list), "Something went wrong. Please enter the features seperated by a comma"
-        high_low = input(
-            "For each feature please enter 'high' if you want the feature to be high or 'low' if you want it to be low [e.g. high,low]").split(
-            ",")
-        high_low = [True if x == "high" else False for x in high_low]
-        assert isinstance(high_low, list), "Something went wrong. Please enter the features seperated by a comma"
-        assert len(features) == len(high_low), "Number of features and True/False must be equal"
-        # loop through selected features to filter by
-        for feat, high in zip(features, high_low):
-            final_recomms = feature_filter(final_recomms, feature=feat, high=high)
-        print(f"Your list of recommended songs is now {len(final_recomms)} songs long")
-        proceed = input("Do you wish to proceed or filter differently? [proceed/filter]").lower()
-        if proceed == "proceed":
+        # manual filtering by audio feature
+        manual_filter = input(
+            "Do you wish to filter the recommendations manually by setting one of the following audio features very "
+            "high or very low: speechiness, acousticness, instrumentalness, liveness [y/n]").lower()
+        if manual_filter == "y":
+            features = input(
+                "Which features would you like to filter by? (Not more than 1-2 recommended) "
+                "[e.g. speechiness,liveness]").split(",")
+
+            assert isinstance(features, list), "Something went wrong. Please enter the features seperated by a comma"
+            high_low = input("For each feature please enter 'high' if you want the feature to be high or 'low' "
+                             "if you want it to be low [e.g. high,low]").split(",")
+            high_low = [True if x == "high" else False for x in high_low]
+            assert isinstance(high_low, list), "Something went wrong. Please enter the features seperated by a comma"
+            assert len(features) == len(high_low), "Number of features and True/False must be equal"
+
+            # loop through selected features to filter by
+            for feat, high in zip(features, high_low):
+                final_recomms = feature_filter(final_recomms, feature=feat, high=high)
+            print(f"Your list of recommended songs is now {len(final_recomms)} songs long")
+            proceed = input("Do you wish to proceed or filter differently? [proceed/filter]").lower()
+            if proceed == "proceed":
+                break
+        else:
             break
+
+    # filter with mean song or sample from recommended
+    n_recommendations = int(
+        input("how many songs would you like to add to your playlist? Please enter a number between 1 - 20   "))
+    assert 21 > n_recommendations > 0, "Number of Recommendations must be between 1 and 20"
+    assert len(final_recomms) > n_recommendations, "Can't add more song than the filtered dataframe contains"
+
+    mean_song_filter = input(
+        "Do you wish to filter the songs further by comparing them to the average playlist song? "
+        "[y/n] (This is works for playlists with a very unified 'sound')").lower()
+    if mean_song_filter == "y":
+        final_recomms = filter_with_meansong(mean_song, final_recomms, n_recommendations=n_recommendations)
     else:
-        break
-
-# filter with mean song or sample from recommended
-n_recommendations = int(
-    input("how many songs would you like to add to your playlist? Please enter a number between 1 - 20   "))
-assert 21 > n_recommendations > 0, "Number of Recommendations must be between 1 and 20"
-assert len(final_recomms) > n_recommendations, "Can't add more song than the filtered dataframe contains"
-
-mean_song_filter = input(
-    "Do you wish to filter the songs further by comparing them to the average playlist song? [y/n] (This is works for "
-    "playlists with a very unified 'sound')").lower()
-if mean_song_filter == "y":
-    final_recomms = filter_with_meansong(mean_song, final_recomms, n_recommendations=n_recommendations)
-else:
-    final_recomms = final_recomms.sample(n=n_recommendations)
-confirm = input("Please confirm that you want to add songs to the playlist by typing YES   ")
-if confirm == "YES":
-    sp.user_playlist_add_tracks(username, playlist_id=playlist_uri, tracks=final_recomms["track_id"].tolist())
+        final_recomms = final_recomms.sample(n=n_recommendations)
+    confirm = input("Please confirm that you want to add songs to the playlist by typing YES   ")
+    if confirm == "YES":
+        sp.user_playlist_add_tracks(username, playlist_id=playlist_uri, tracks=final_recomms["track_id"].tolist())

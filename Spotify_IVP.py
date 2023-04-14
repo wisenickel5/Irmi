@@ -36,7 +36,7 @@ def create_set_of_bad_songs(taste_data):
     return taste_vector
 
 
-def get_playlist_data(playlist_URI,Nlist):
+def get_playlist_data(playlist_URI, Nlist):
     Matrix = []
     Mlist = list()
     for track in sp.playlist_items(playlist_URI)["items"]:
@@ -72,13 +72,11 @@ playlist_URI = good_playlist_link.split("/")[-1].split("?")[0]
 playlist_URI2 = bad_playlist_link.split("/")[-1].split("?")[0]
 track_uris = [x["track"]["uri"] for x in sp.playlist_items(playlist_URI)["items"]]
 
-
 Nlist = list()
-Nlist2=list()
-Nlist = get_playlist_data(playlist_URI,Nlist)
-Nlist2=get_playlist_data(playlist_URI,Nlist2)
-GS=create_set_of_good_songs(Nlist)
-BS=create_set_of_bad_songs(Nlist2)
-data=GS+BS
+Nlist2 = list()
+Nlist = get_playlist_data(playlist_URI, Nlist)
+Nlist2 = get_playlist_data(playlist_URI, Nlist2)
+GS = create_set_of_good_songs(Nlist)
+BS = create_set_of_bad_songs(Nlist2)
+data = GS + BS
 print(data)
-
