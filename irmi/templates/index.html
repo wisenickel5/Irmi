@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Irmi</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='/css/styles.css')}}" />
+</head>
+<body>
+    <div class="container">
+        <h1>(Impressionable) Music Recommendation System</h1>
+        <form id="music-form" action="/recommend" method="post">
+            <label for="genre">Select a mood:</label>
+            <select name="genre" id="genre">
+                <option value="rock">Happy</option>
+                <option value="pop">Sad</option>
+                <option value="jazz">Angry</option>
+                <option value="hip-hop">Relaxed</option>
+            </select>
+            <button type="submit" id="submit-btn">Get Recommendation</button>
+        </form>
+    </div>
+</body>
+</html>

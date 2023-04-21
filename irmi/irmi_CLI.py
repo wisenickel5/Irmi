@@ -1,38 +1,41 @@
-from google.cloud import secretmanager
-from flask import Flask, request, session, redirect
+from flask import request, session, redirect, render_template, make_response
 from time import time
 import logging
 
 import config
-from authenticate import get_token
-from services import get_user_information
-
-app = Flask(__name__)
-app.config.from_object(config)
-app.config.from_mapping(SECRET_KEY='dev')
+from irmi.authenticate import get_token, create_state_key, CredentialManager
+from irmi.services import get_user_information, get_recommendations
+from irmi import app
 
 
-def access_secrets_versions() -> dict:
-    # Create the Secret Manager client.
-    service_client = secretmanager.SecretManagerServiceClient()
-
-    # Build the resource names of the secret version.
-    client_id_name = f"projects/1058885278278/secrets/CLIENT_ID"
-    client_secret_name = f"projects/1058885278278/secrets/CLIENT_SECRET"
-
-    # Access the secret version.
-    responses = {
-        'client_id': service_client.access_secret_version(name=client_id_name),
-        'client_secret': service_client.access_secret_version(name=client_secret_name)
-    }
-
-    # Return the decoded payloads within a dictionary
-    return {k: v.payload.data.decdode('UTF-8') for (k, v) in responses.items()}
-
-
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
+@app.route('/index')
 def index():
-    return
+    return render_template('/index.html')
+
+
+@app.route('/authorize')
+def authorize():
+    """
+    This feature activates when, the user decides to not allow
+    the app to use their account and the page redirects them to the account
+    page.
+    """
+    client_id = CredentialManager().gcp_secrets['client_id']
+    redirect_uri = config.REDIRECT_URI
+    scope = config.SCOPE
+
+    # State key used to protect against cross-site forgery attacks
+    state_key = create_state_key(15)
+    session['state_key'] = state_key
+
+    # Redirect user to Spotify authorization page
+    authorize_url = 'https://accounts.spotify.com/en/authorize?'
+    parameters = 'client_id=' + client_id + '&response_type=code' + '&redirect_uri=' + redirect_uri + \
+                 '&scope=' + scope + '&state=' + state_key
+    response = make_response(redirect(authorize_url + parameters))
+
+    return response
 
 
 @app.route('/callback')
@@ -63,27 +66,21 @@ def callback():
     return redirect(session['previous_url'])
 
 
-if __name__ == "__main__":
-    import argparse
-    import spotipy
-    from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
+@app.route('/recommendations')
+def recommendations():
+    # make sure application is authorized for user
+    if session.get('token') is None or session.get('token_expiration') is None:
+        session['previous_url'] = '/tracks'
+        return redirect('/authorize')
 
-    # Use the argparse library to read in command line arguments passed in
-    parser = argparse.ArgumentParser(prog='Irmi - (Impressionable) Music Recommendation Inquiry System',
-                                     description="Analyzes a user’s Spotify listening history with sound & mood "
-                                                 "classification models to build a more tasteful playlists.")
-    args = parser.parse_args()
-    print("Welcome to the (Impressionable) Music Recommendation System!")
+    # collect user information
+    if session.get('user_id') is None:
+        current_user = get_user_information(session)
+        session['user_id'] = current_user['id']
 
-    # Initialize the Flask server
-    app.run(debug=True)
+    recommended_track_ids = get_recommendations(session)
 
-    # TODO: Authenticate User
-    SCOPE = 'user-read-email%20user-read-private%20user-top-read%20user-read-playback-state%20playlist-modify-public%20playlist-modify-private%20user-top-read%20user-read-recently-played%20user-library-read'
-    secrets = access_secrets_versions()
-    REDIRECT_URI = "https://irmi.app/callback"  # TODO: Create Flask server to handle this.
-    spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id=secrets['client_id'],
-                                                                                  client_secret=secrets['client_secret']),
-                              auth_manager=SpotifyOAuth(scope=SCOPE))
-
-    # TODO: Retrieve desired mood from user
+    if recommended_track_ids is None:
+        return render_template('index.html', error='Failed to get liked tracks')
+    elif recommended_track_ids is not None:
+        return render_template('recommendations.html', track_ids=recommended_track_ids)

@@ -1,7 +1,26 @@
 from flask import current_app
 import requests
 from time import time
+import string as string
+import random as rand
 import logging
+from google.cloud import secretmanager
+
+from irmi.utils import Singleton
+
+
+def create_state_key(size):
+    """Provides a state key for authorization request. To prevent forgery attacks, the state key
+    is used to make sure that the response comes from the same place that the request was sent from.
+    Reference: https://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits
+
+    Args:
+        size (int): Determines the size of the State Key
+
+    Returns:
+        string: A randomly generated code with the length of the size parameter
+    """
+    return ''.join(rand.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(size))
 
 
 def get_token(code):
@@ -29,15 +48,10 @@ def get_token(code):
     post_request = requests.post(url=token_url, data=request_body)
     p_response = post_request.json()
 
-    # Log POST Response output in terminal
-    current_app.logger.debug(f"\n\nCurrent code {code}")
-    current_app.logger.debug(f'\n\n(getToken) Post Response Status Code -> {post_request.status_code}')
-    current_app.logger.debug(f'\n\nPost Response Formatted -> {post_request}\n\n')
-
     if post_request.status_code == 200:
         return p_response['access_token'], p_response['refresh_token'], p_response['expires_in']
     else:
-        logging.error('getToken: ' + str(post_request.status_code))
+        logging.error('get_token Failure: ' + str(post_request.status_code))
         return None
 
 
@@ -55,7 +69,8 @@ def refresh_token(token):
     token_url = 'https://accounts.spotify.com/api/token'
     authorization = current_app.config['AUTHORIZATION']
 
-    headers = {'Authorization': authorization, 'Accept': 'application/json', 'Content-Type': 'application/x-www-form-urlencoded'}
+    headers = {'Authorization': authorization, 'Accept': 'application/json',
+               'Content-Type': 'application/x-www-form-urlencoded'}
     body = {'refresh_token': token, 'grant_type': 'refresh_token'}
     post_response = requests.post(token_url, headers=headers, data=body)
 
@@ -88,7 +103,7 @@ def check_token_status(session):
         session['token'] = payload[0]
         session['token_expiration'] = time() + payload[1]
     else:
-        logging.error('checkTokenStatus')
+        logging.error('check_token_status Failure...')
         return None
     return "Success"
 
@@ -123,3 +138,30 @@ def make_get_request(session, url, params=None):
     else:
         logging.error('makeGetRequests:' + str(get_response.status_code))
         return None
+
+
+@Singleton
+class CredentialManager:
+    def __init__(self):
+        self.gcp_secrets = self.access_secrets_versions()
+
+    @staticmethod
+    def access_secrets_versions() -> dict:
+        # Create the Secret Manager client.
+        service_client = secretmanager.SecretManagerServiceClient()
+
+        # Build the resource names of the secret version.
+        client_id_name = f"projects/1058885278278/secrets/CLIENT_ID/versions/1"
+        client_secret_name = "projects/1058885278278/secrets/CLIENT_SECRET/versions/1"
+
+        # Access the secret version.
+        responses = {
+            'client_id': service_client.access_secret_version(name=client_id_name),
+            'client_secret': service_client.access_secret_version(name=client_secret_name)
+        }
+
+        payload = {k: v.payload.data.decode('UTF-8') for (k, v) in responses.items()}
+        logging.debug("Payload received from GCP")
+
+        # Return the decoded payloads within a dictionary
+        return payload

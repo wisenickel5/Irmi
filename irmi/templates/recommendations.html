@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommended Songs</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='/css/styles-recommendations.css')}}" />
+</head>
+<body>
+    <div class="container">
+        <h1>Recommended Songs</h1>
+        <div class="carousel">
+            <div class="carousel-inner">
+                <!-- Example song item, repeat this structure for each song in the list -->
+                <div class="carousel-item">
+                    <h2>Song Title</h2>
+                    <p>Artist Name</p>
+                </div>
+            </div>
+            <button class="carousel-control prev" onclick="moveCarousel(-1)">&#10094;</button>
+            <button class="carousel-control next" onclick="moveCarousel(1)">&#10095;</button>
+        </div>
+        <div class="actions">
+            <a href="/" class="button">Back to Index</a>
+            <a href="/recommend" class="button">New Recommendation</a>
+        </div>
+    </div>
+    <script src="carousel.js"></script>
+</body>
+</html>

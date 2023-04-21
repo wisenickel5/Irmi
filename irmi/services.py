@@ -1,4 +1,6 @@
-from authenticate import make_get_request
+from flask import redirect
+
+from irmi.authenticate import make_get_request
 
 
 def get_user_information(session):
@@ -17,3 +19,7 @@ def get_user_information(session):
 		return None
 
 	return payload
+
+
+def get_recommendations(session):
+	return None
