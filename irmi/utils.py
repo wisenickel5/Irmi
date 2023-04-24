@@ -11,7 +11,7 @@ class Singleton:
 
     To get the singleton instance, use the `instance` method. Trying
     to use `__call__` will result in a `TypeError` being raised.
-
+    https://stackoverflow.com/questions/31875/is-there-a-simple-elegant-way-to-define-singletons
     """
 
     def __init__(self, decorated):

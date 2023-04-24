@@ -22,4 +22,9 @@ def get_user_information(session):
 
 
 def get_recommendations(session):
+	"""
+	Returns a set of recommended tracks in JSON format.
+	:param session:
+	:return: (dict) A list of recommended tracks.
+	"""
 	return None
