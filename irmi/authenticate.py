@@ -7,6 +7,7 @@ import logging
 from google.cloud import secretmanager
 
 from irmi.utils import Singleton
+import config
 
 
 def create_state_key(size):
@@ -33,19 +34,15 @@ def get_token(code):
     Returns:
         tuple(str, str, str) : Access Token, Refresh Token, Expiration Time
     """
-    grant_type = current_app.config['GRANT_TYPE']
-    redirect_uri = current_app.config['REDIRECT_URI']
-    client_id = current_app.config['CLIENT_ID']
-    client_secret = current_app.config['CLIENT_SECRET']
     token_url = current_app.config['TOKEN_URL']
     request_body = {
-        "grant_type": grant_type,
+        "grant_type": config.GRANT_TYPE,
         "code": code,
-        "redirect_uri": redirect_uri,
-        "client_id": client_id,
-        "client_secret": client_secret,
+        "redirect_uri": config.REDIRECT_URI,
+        "client_id": CredentialManager.instance().gcp_secrets['client_id'],
+        "client_secret": CredentialManager.instance().gcp_secrets['client_secret'],
     }
-    post_request = requests.post(url=token_url, data=request_body)
+    post_request = requests.post(url=config.TOKEN_URL, data=request_body)
     p_response = post_request.json()
 
     if post_request.status_code == 200:

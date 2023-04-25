@@ -11,7 +11,7 @@ app.config.from_object(config)
 app.config.from_mapping(SECRET_KEY='dev')
 
 # Authenticate with Google Cloud Platform to receive credentials.
-cm = CredentialManager()
+cm = CredentialManager.instance()
 
 # Authenticate Irmi application with Spotify
 spotify = spotipy.Spotify(client_credentials_manager=SpotifyClientCredentials(client_id=cm.gcp_secrets['client_id'],

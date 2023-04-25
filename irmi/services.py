@@ -21,6 +21,22 @@ def get_user_information(session):
 	return payload
 
 
+def get_liked_track_ids(session):
+	url = 'https://api.spotify.com/v1/me/tracks'
+	payload = make_get_request(session, url)
+
+	if payload is None:
+		return None
+
+	liked_tracks_ids = []
+	for track in payload['items']:
+		liked_id = track['track'].get('id', None)
+		if liked_id:
+			liked_tracks_ids.append(liked_id)
+
+	return liked_tracks_ids
+
+
 def get_recommendations(session):
 	"""
 	Returns a set of recommended tracks in JSON format.
