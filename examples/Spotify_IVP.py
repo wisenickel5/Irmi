@@ -72,12 +72,14 @@ def create_set_of_bad_songs(taste_data):
     return taste_vector
 
 
-def create_set_of_potential(data, W):
+def create_set_of_potential(data,URIS, W):
     vector = list()
+    songs_uri=list()
     for i in range(0, len(data)):
         if SVCA.prediction(SVCA.calc_Wx(W, np.array(data[i]))) == 0:
             vector.append(data[i])
-    return vector
+            songs_uri.append(URIS[i])
+    return vector,songs_uri
 
 
 def get_playlist_data(playlist_URI, Nlist):
@@ -113,18 +115,19 @@ def get_playlist_data(playlist_URI, Nlist):
 def get_user_data(data):
     Mlist = list()
     Nlist = list()
+    URIS=list()
     for i in range(0, len(data)):
         # URI
         track_uri = data[i]["track"]["uri"]
         Mlist.append([sp.audio_features(track_uri)[0], track_uri])
-
+        URIS.append(track_uri)
     for i in range(0, len(Mlist)):
         Nlist.append(list(Mlist[i][0].values())[:9])
-    return Nlist
+    return Nlist,URIS
 
 
 results = sp.current_user_saved_tracks()["items"]
-results = get_user_data(results)
+results,URIS = get_user_data(results)
 good_playlist_link = "https://open.spotify.com/playlist/4FJ7NmgSV8ttdozvfc6EgN?si=9dbbe50c19d44b56"
 bad_playlist_link = "https://open.spotify.com/playlist/2OdWS5qgdX4oQEQQrqHYZe?si=afe1076fd7d14494"
 playlist_URI = good_playlist_link.split("/")[-1].split("?")[0]
@@ -139,10 +142,10 @@ GS = create_set_of_good_songs(Nlist)
 BS = create_set_of_bad_songs(Nlist2)
 data = GS + BS
 Score, W = SVCA.IVP(data, .1)
-MS=create_set_of_potential(results,W)
+MS,MURIS=create_set_of_potential(results,URIS,W)
 print(MS)
 Mood_matrix = SVCA.MODEL(W)
 
 print(Mood_matrix.model)
 
-print(data)
+print(MURIS)
