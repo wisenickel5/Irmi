@@ -4,7 +4,7 @@ import logging
 
 import config
 from irmi.authenticate import get_token, create_state_key, CredentialManager
-from irmi.services import get_user_information, get_recommendations, get_liked_track_ids
+import irmi.services as sv
 from irmi import app
 
 
@@ -58,7 +58,7 @@ def callback():
         else:
             raise RuntimeWarning('Failed to access token')
 
-    current_user = get_user_information(session)
+    current_user = sv.get_user_information(session)
     session['user_id'] = current_user['id']
     logging.info('new user:' + session['user_id'])
 
@@ -74,14 +74,24 @@ def recommendations():
 
     # Collect user information
     if session.get('user_id') is None:
-        current_user = get_user_information(session)
+        current_user = sv.get_user_information(session)
         session['user_id'] = current_user['id']
 
     # TODO: Get recommended tracks. Placing user's liked tracks for now as a placeholder
     # recommended_track_ids = get_recommendations(session)
-    recommended_track_ids = get_liked_track_ids(session)
+    recommended_track_ids = sv.get_liked_track_ids(session)
+    top_genres = sv.get_user_top_genres(session)
 
-    if recommended_track_ids is None:
-        return render_template('index.html', error='Failed to get liked tracks')
-    elif recommended_track_ids is not None:
-        return render_template('recommendations.html', track_ids=recommended_track_ids)
+    if recommended_track_ids and top_genres:
+        # Group the tracks based on the users most listened to genres
+        grouped_recommended_tracks = sv.group_tracks_by_genre(session, recommended_track_ids, top_genres)
+    else:
+        logging.error('Failed to get top genres and recommended tracks!')
+        return render_template('index.html')
+
+    if grouped_recommended_tracks is None:
+        logging.error('Failed to group recommendations')
+        return render_template('index.html')
+
+    elif grouped_recommended_tracks is not None:
+        return render_template('recommendations.html', track_ids=grouped_recommended_tracks)

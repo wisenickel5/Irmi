@@ -9,22 +9,23 @@
 <body>
     <div class="container">
         <h1>Recommended Songs</h1>
-        <div class="carousel">
-            <div class="carousel-inner">
-                <!-- Example song item, repeat this structure for each song in the list -->
-                <div class="carousel-item">
-                    <h2>Song Title</h2>
-                    <p>Artist Name</p>
+        {% for genre, tracks in track_ids.items() %}
+        <div class="genre-section">
+            <h2>{{ genre.capitalize() }}</h2>
+            <div class="tracks">
+                {% for track in tracks %}
+                <div class="track">
+                    <h3>{{ track.name }}</h3>
+                    <p>Genres: {{ ', '.join(track.artist_genres) }}</p>
                 </div>
+                {% endfor %}
             </div>
-            <button class="carousel-control prev" onclick="moveCarousel(-1)">&#10094;</button>
-            <button class="carousel-control next" onclick="moveCarousel(1)">&#10095;</button>
         </div>
+        {% endfor %}
         <div class="actions">
             <a href="/" class="button">Back to Index</a>
             <a href="/" class="button">New Recommendation</a>
         </div>
     </div>
-    <script src="carousel.js"></script>
 </body>
 </html>

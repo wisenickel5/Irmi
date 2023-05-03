@@ -1,5 +1,8 @@
+import logging
+
 import numpy as np
-from flask import redirect
+import requests
+from collections import Counter
 
 from irmi import SVCA
 from irmi.authenticate import make_get_request
@@ -26,13 +29,13 @@ def create_set_of_bad_songs(taste_data):
     return taste_vector
 
 
-def create_set_of_potential(data, URIS, W):
+def create_set_of_potential(data, uris, w):
     vector = list()
     songs_uri = list()
     for i in range(0, len(data)):
-        if SVCA.prediction(SVCA.calc_Wx(W, np.array(data[i]))) == 0:
+        if SVCA.prediction(SVCA.calc_Wx(w, np.array(data[i]))) == 0:
             vector.append(data[i])
-            songs_uri.append(URIS[i])
+            songs_uri.append(uris[i])
     return vector, songs_uri
 
 
@@ -111,10 +114,113 @@ def get_liked_track_ids(session):
     return liked_tracks_ids
 
 
-def get_recommendations(session):
-    """
-    Returns a set of recommended tracks in JSON format.
-    :param session:
-    :return: (dict) A list of recommended tracks.
-    """
-    return None
+def get_recommendations(session, seed_artists, seed_genres, seed_tracks, limit, market, target_acousticness,
+                        target_danceability, target_duration_ms, target_energy, target_instrumentalness,
+                        target_key, target_liveness, target_loudness, target_mode, target_popularity,
+                        target_speechiness, target_tempo, target_time_signature, target_valence):
+    url = 'https://api.spotify.com/v1/recommendations'
+
+    params = {
+        'seed_artists': ','.join(seed_artists),
+        'seed_genres': ','.join(seed_genres),
+        'seed_tracks': ','.join(seed_tracks),
+        'limit': limit,
+        'market': market,
+        'target_acousticness': target_acousticness,
+        'target_danceability': target_danceability,
+        'target_duration_ms': target_duration_ms,
+        'target_energy': target_energy,
+        'target_instrumentalness': target_instrumentalness,
+        'target_key': target_key,
+        'target_liveness': target_liveness,
+        'target_loudness': target_loudness,
+        'target_mode': target_mode,
+        'target_popularity': target_popularity,
+        'target_speechiness': target_speechiness,
+        'target_tempo': target_tempo,
+        'target_time_signature': target_time_signature,
+        'target_valence': target_valence
+    }
+
+    headers = {'Authorization': f'Bearer {session}'}
+    response = requests.get(url, headers=headers, params=params)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        # TODO: Handle errors
+        return None
+
+
+def get_user_top_genres(session, time_range='medium_term', artist_limit=50):
+    url = 'https://api.spotify.com/v1/me/top/artists'
+    headers = {'Accept': 'application/json',
+               'Content-Type': 'application/json',
+               'Authorization': f"Bearer {session['token']}"}
+    params = {
+        'time_range': time_range,  # short_term (last 4 weeks), medium_term (last 6 months), long_term (last several years)
+        'limit': artist_limit  # The maximum number of artists to return (max: 50)
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+
+    if response.status_code == 200:
+        top_artists = response.json()['items']
+        genre_counter = Counter()
+
+        if top_artists:
+            for artist in top_artists:
+                genres = artist['genres']
+                genre_counter.update(genres)
+
+            return dict(genre_counter)
+        else:
+            logging.error('(get_user_top_genres) Top Artists not found!')
+    else:
+        logging.critical(f'(get_user_top_genres) Unable to make GetTopArtists Request! Status code: {response.status_code}')
+        logging.critical(f'(get_user_top_genres) Response content: {response.content}')
+        return None
+
+
+def get_artist_genres(artist_id, session):
+    url = f'https://api.spotify.com/v1/artists/{artist_id}'
+    headers = {'Accept': 'application/json',
+               'Content-Type': 'application/json',
+               'Authorization': f"Bearer {session['token']}"}
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        return response.json().get('genres', [])
+    else:
+        return []
+
+
+def group_tracks_by_genre(session, recommendations, user_top_genres):
+    grouped_tracks = {genre: [] for genre in user_top_genres}
+    grouped_tracks['other'] = []  # Add an "other" key to handle tracks that don't belong to user's top genres
+
+    for track in recommendations:
+        track_id = track.get('id')
+        track_name = track.get('name')
+        artist_id = track['artists'][0]['id']
+
+        artist_genres = get_artist_genres(artist_id, session)
+        assigned_genre = None
+
+        for user_genre in user_top_genres:
+            if any(user_genre in artist_genre for artist_genre in artist_genres):
+                assigned_genre = user_genre
+                break
+
+        if not assigned_genre:
+            assigned_genre = 'other'
+
+        track_metadata = {
+            'id': track_id,
+            'name': track_name,
+            'artist_id': artist_id,
+            'artist_genres': artist_genres
+        }
+        grouped_tracks[assigned_genre].append(track_metadata)
+
+    return grouped_tracks
