@@ -1,3 +1,6 @@
+from typing import Any, Type
+
+
 class Singleton:
     """
     A non-thread-safe helper class to ease implementing singletons.
@@ -14,10 +17,10 @@ class Singleton:
     https://stackoverflow.com/questions/31875/is-there-a-simple-elegant-way-to-define-singletons
     """
 
-    def __init__(self, decorated):
+    def __init__(self, decorated: Type) -> None:
         self._decorated = decorated
 
-    def instance(self):
+    def instance(self) -> Any:
         """
         Returns the singleton instance. Upon its first call, it creates a
         new instance of the decorated class and calls its `__init__` method.
@@ -30,8 +33,8 @@ class Singleton:
             self._instance = self._decorated()
             return self._instance
 
-    def __call__(self):
+    def __call__(self) -> None:
         raise TypeError('Singletons must be accessed through `instance()`.')
 
-    def __instancecheck__(self, inst):
+    def __instancecheck__(self, inst: Any) -> bool:
         return isinstance(inst, self._decorated)

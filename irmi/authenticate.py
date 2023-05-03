@@ -1,9 +1,9 @@
-from flask import current_app
 import requests
 from time import time
 import string as string
 import random as rand
 import logging
+import base64
 from google.cloud import secretmanager
 
 from irmi.utils import Singleton
@@ -34,7 +34,6 @@ def get_token(code):
     Returns:
         tuple(str, str, str) : Access Token, Refresh Token, Expiration Time
     """
-    token_url = current_app.config['TOKEN_URL']
     request_body = {
         "grant_type": config.GRANT_TYPE,
         "code": code,
@@ -52,33 +51,27 @@ def get_token(code):
         return None
 
 
-def refresh_token(token):
-    """
-    POST Request is made to Spotify API with refresh token (only if access token and
-    refresh token were previously acquired) creating a new access token
-
-    Args:
-        token (string)
-
-    Returns:
-        tuple(str, str): Access Token, Expiration Time
-    """
+def refresh_token(token, client_id, client_secret):
     token_url = 'https://accounts.spotify.com/api/token'
-    authorization = current_app.config['AUTHORIZATION']
 
-    headers = {'Authorization': authorization, 'Accept': 'application/json',
-               'Content-Type': 'application/x-www-form-urlencoded'}
+    # Encode the client_id and client_secret in base64 format
+    client_credentials = f"{client_id}:{client_secret}"
+    encoded_credentials = base64.b64encode(client_credentials.encode()).decode()
+
+    headers = {
+        'Authorization': f'Basic {encoded_credentials}',
+        'Accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
     body = {'refresh_token': token, 'grant_type': 'refresh_token'}
     post_response = requests.post(token_url, headers=headers, data=body)
 
-    # 200 code indicates access token was properly granted
     if post_response.status_code == 200:
         token = post_response.json()['access_token']
         exp_time = post_response.json()['expires_in']
-        current_app.logger.info(f"Refresh Token: {token}\nExpiration time: {exp_time}")
         return token, exp_time
     else:
-        logging.error('refreshToken:' + str(post_response.status_code))
+        logging.error('refresh_token:' + str(post_response.status_code))
         return None
 
 
@@ -94,7 +87,9 @@ def check_token_status(session):
     """
     payload = None
     if time() > session['token_expiration']:
-        payload = refresh_token(session['refresh_token'])
+        payload = refresh_token(session['refresh_token'],
+                                CredentialManager.instance().gcp_secrets['client_id'],
+                                CredentialManager.instance().gcp_secrets['client_secret'])
 
     if payload is not None:
         session['token'] = payload[0]
@@ -124,9 +119,6 @@ def make_get_request(session, url, params=None):
                'Content-Type': 'application/json',
                'Authorization': f"Bearer {session['token']}"}
     get_response = requests.get(url, headers=headers, params=params)
-
-    # Log GET Response output in terminal
-    current_app.logger.debug(f'\n\n(makeGetRequest) GET Response Status Code -> {get_response.status_code}')
 
     if get_response.status_code == 200:
         return get_response.json()
