@@ -114,18 +114,44 @@ def get_liked_track_ids(session):
     return liked_tracks_ids
 
 
-def get_recommendations(session, seed_artists, seed_genres, seed_tracks, limit, market, target_acousticness,
-                        target_danceability, target_duration_ms, target_energy, target_instrumentalness,
-                        target_key, target_liveness, target_loudness, target_mode, target_popularity,
-                        target_speechiness, target_tempo, target_time_signature, target_valence):
-    url = 'https://api.spotify.com/v1/recommendations'
+def get_recommendations(session,
+                        target_acousticness: float,     target_danceability: float,         target_duration_ms: float,
+                        target_energy: float,           target_instrumentalness: float,     target_key: float,
+                        target_liveness: float,         target_loudness: float,             target_mode: float,
+                        target_popularity: float,       target_speechiness: float,          target_tempo: float,
+                        target_time_signature: float,   target_valence: float,              limit: int = 50):
+    """
+    Read the following Spotify documentation: https://developer.spotify.com/documentation/web-api/reference/get-recommendations
+    For each of the tunable track attributes (below) a target value may be provided.
+    Tracks with the attribute values nearest to the target values will be preferred
+    :param session:
+    :param target_acousticness: Range: 0-1
+    :param target_danceability: Range: 0-1
+    :param target_duration_ms: Range: 0-1
+    :param target_energy: Range: 0-1
+    :param target_instrumentalness: Range: 0-1
+    :param target_key: Range: 0-1
+    :param target_liveness: Range: 0-1
+    :param target_loudness: Range: 0-1
+    :param target_mode: Range: 0-1
+    :param target_popularity: Range: 0-1
+    :param target_speechiness: Range: 0-1
+    :param target_tempo: Range: 0-1
+    :param target_time_signature: Range: 0-1
+    :param target_valence: Range: 0-1
+    :param limit:
+    :return:
+    """
+    # TODO: Populate seed_artists, seed_genres, & seed_tracks with calls to Spotify API
+    seed_artists, seed_genres, seed_tracks = None, None, None
 
+    url = 'https://api.spotify.com/v1/recommendations'
     params = {
         'seed_artists': ','.join(seed_artists),
         'seed_genres': ','.join(seed_genres),
         'seed_tracks': ','.join(seed_tracks),
         'limit': limit,
-        'market': market,
+        'market': 'US',
         'target_acousticness': target_acousticness,
         'target_danceability': target_danceability,
         'target_duration_ms': target_duration_ms,
