@@ -1,4 +1,6 @@
 from typing import Any, Type
+import requests
+import logging
 
 
 class Singleton:
@@ -38,3 +40,21 @@ class Singleton:
 
     def __instancecheck__(self, inst: Any) -> bool:
         return isinstance(inst, self._decorated)
+
+
+def get_items_from_api(session, url, params, item_key):
+    headers = {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': f"Bearer {session['token']}"
+    }
+
+    response = requests.get(url, headers=headers, params=params)
+
+    if response.status_code == 200:
+        return response.json()[item_key]
+    else:
+        logging.error(f'Unable to make API request! Status code: {response.status_code}')
+        logging.error(f'Response content: {response.content}')
+        return None
+
