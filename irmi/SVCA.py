@@ -8,7 +8,6 @@ from sklearn.preprocessing import LabelEncoder
 # simple construct object to hold a models weights or other stuff if we want
 
 class MODEL:
-
     def __init__(self, model):
         self.model = model
 
@@ -56,18 +55,18 @@ def update(W, x, y, a, c):
 
 # algorithm body
 def IVP(data, tz):
-    X=list()
-    y=list()
-    for i in range(0,len(data)):
-        temp=list()
-        for j in range(0,len(data[0])):
-            if(j<len(data[0])-1):
+    X = list()
+    y = list()
+    for i in range(0, len(data)):
+        temp = list()
+        for j in range(0, len(data[0])):
+            if j < len(data[0]) - 1:
                 X.append(data[i][j])
             else:
                 y.append(data[i][j])
 
-    X=np.array(X)
-    y=np.array(y)
+    X = np.array(X)
+    y = np.array(y)
     le = LabelEncoder()
     uniqueY = len(np.unique(y))
     scaler = StandardScaler().fit(X)
@@ -78,20 +77,17 @@ def IVP(data, tz):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=tz)
 
     W = np.random.uniform(1, 1, (uniqueY, len(X[0])))
-    # print(W)
+
     for j in range(0, int(tz * 1000)):
 
         for i in range(0, len(X_train)):
             W = update(W, X_train[i], y_train[i], j, uniqueY)
     c = 0
-    potential_songs=list()
+    potential_songs = list()
     for i in range(0, len(X)):
         p = prediction(calc_Wx(W, X))
-        if(p==1):
+        if p == 1:
             potential_songs.append(X)
-        if (y[i] == p):
+        if y[i] == p:
             c += 1
-    return c / len(X_test),W,potential_songs
-
-
-
+    return c / len(X_test), W, potential_songs
