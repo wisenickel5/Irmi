@@ -80,7 +80,8 @@ def recommendations():
 
     mood = request.form.get('mood')
 
-    recommended_track_ids = sv.get_recommendations(session, mood)
+    recommended_track_ids = sv.get_liked_track_ids(session)
+    # recommended_track_ids = sv.get_recommendations(session, mood)
     top_genres = sv.get_user_top_genres(session)
 
     if recommended_track_ids and top_genres:

@@ -7,7 +7,7 @@ import random
 
 from irmi import SVCA
 from irmi.authenticate import make_get_request
-from utils import get_items_from_api
+from irmi.utils import get_items_from_api
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
