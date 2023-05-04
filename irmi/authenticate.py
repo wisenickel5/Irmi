@@ -5,6 +5,8 @@ import random as rand
 import logging
 import base64
 from google.cloud import secretmanager
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
+import spotipy
 
 from irmi.utils import Singleton
 import config
@@ -154,3 +156,22 @@ class CredentialManager:
 
         # Return the decoded payloads within a dictionary
         return payload
+
+
+@Singleton
+class SpotifyAPIClient:
+    def __init__(self):
+        self.cm = CredentialManager.instance()
+        self.sp = self.authenticate_with_spotify()
+
+    def authenticate_with_spotify(self):
+        # Authenticate Irmi application with Spotify
+        spotify = spotipy.Spotify(
+            client_credentials_manager=SpotifyClientCredentials(client_id=self.cm.gcp_secrets['client_id'],
+                                                                client_secret=self.cm.gcp_secrets['client_secret']),
+            auth_manager=SpotifyOAuth(scope=config.SCOPE,
+                                      client_id=self.cm.gcp_secrets['client_id'],
+                                      client_secret=self.cm.gcp_secrets['client_secret'],
+                                      redirect_uri=config.REDIRECT_URI,
+                                      ))
+        return spotify
