@@ -76,7 +76,7 @@ def IVP(data, tz):
     X = norm_data(X)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=tz)
 
-    W = np.random.uniform(1, 1, (uniqueY, len(X[0])))
+    W = np.random.uniform(1, 1, (2, len(X[0])))
 
     for j in range(0, int(tz * 1000)):
 
@@ -85,7 +85,7 @@ def IVP(data, tz):
     c = 0
     potential_songs = list()
     for i in range(0, len(X)):
-        p = prediction(calc_Wx(W, X))
+        p = prediction(calc_Wx(W, X[i]))
         if p == 1:
             potential_songs.append(X)
         if y[i] == p:
