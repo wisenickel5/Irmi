@@ -74,6 +74,7 @@ def group_songs_by_mood(session, mood):
 
 def get_taste_vector(taste_data):
     taste_vector = list()
+
     for i in range(0, taste_data.shape[1]):
         taste_vector.append(np.mean(taste_data[:, i]))
     return taste_vector

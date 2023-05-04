@@ -87,7 +87,7 @@ def IVP(data, tz):
     for i in range(0, len(X)):
         p = prediction(calc_Wx(W, X[i]))
         if p == 1:
-            potential_songs.append(X)
+            potential_songs.append(np.array(X[i]))
         if y[i] == p:
             c += 1
     return c / len(X_test), W, potential_songs
