@@ -3,29 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recommended Songs</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='/css/styles-recommendations.css')}}" />
+    <title>Recommendations</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='/css/styles-recommendations.css')}}">
 </head>
 <body>
     <div class="container">
         <h1>Recommended Songs</h1>
-        {% for genre, tracks in track_ids.items() %}
-        <div class="genre-section">
-            <h2>{{ genre.capitalize() }}</h2>
-            <div class="tracks">
-                {% for track in tracks %}
-                <div class="track">
-                    <h3>{{ track.name }}</h3>
-                    <p>Genres: {{ ', '.join(track.artist_genres) }}</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        {% endfor %}
-        <div class="actions">
-            <a href="/" class="button">Back to Index</a>
-            <a href="/" class="button">New Recommendation</a>
+        <div id="recommendations">
+            <!-- The recommendations will be populated by JavaScript -->
         </div>
     </div>
+
+    <script>
+        const recommendationsData = {{ track_ids|tojson|safe }};
+        const accessToken = "{{ access_token }}";
+        const userId = "{{ user_id }}";
+    </script>
+    <script src="../static/javascript/recommendations.js"></script>
 </body>
 </html>
+

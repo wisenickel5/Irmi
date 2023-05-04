@@ -243,8 +243,6 @@ def group_tracks_by_genre(session, recommendations, top_genres):
     genre_groups = {genre: [] for genre in top_genres}
     other_genre_group = []
 
-    print("Recommendations:", recommendations)
-
     for track_id in recommendations:
         track = get_track_info(session, track_id)  # Get track information using track ID
         if not track:
