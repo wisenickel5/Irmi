@@ -64,7 +64,7 @@ def IVP(data, tz):
                 temp.append(data[i][j])
             else:
                 y.append(data[i][j])
-            X.append(temp)
+        X.append(temp)
     X = np.array(X)
     y = np.array(y)
     le = LabelEncoder()
