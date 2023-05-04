@@ -30,34 +30,51 @@ def group_songs_by_mood(username, mood):
         valence = features['valence']
         energy = features['energy']
         tempo = features['tempo']
-
+        f13= features['acousticness']
+        f0 = features['danceability']
+        f1 = features['duration_ms']
+        f2 = features['energy']
+        f3 =  features['instrumentalness']
+        f4 =  features['key']
+        f5 =  features['liveness']
+        f6 =  features['loudness']
+        f7 =   features['mode']
+        f8 =   features['popularity']
+        f9 =   features['speechiness']
+        f10 =   features['tempo']
+        f11 =   features['time_signature']
+        f12 =    features['valence']
         # Classify the song into a mood category
-        if valence < 0.3 and energy < 0.4 and tempo < 100:
-            sad_songs.append(features)
-        else:
-            happy_songs.append(features)
+        if mood == 'happy':
+            if valence < 0.3 and energy < 0.4 and tempo < 100:
+                songs.append([f0,f1,f2,f3,f4,f5,f6,f7,f8,f8,f10,f11,f12,f13,1])
+            else:
+                songs.append([f0,f1,f2,f3,f4,f5,f6,f7,f8,f8,f10,f11,f12,f13,0])
+        if mood == 'sad':
+            if valence < 0.3 and energy < 0.4 and tempo < 100:
+                songs.append([f0,f1,f2,f3,f4,f5,f6,f7,f8,f8,f10,f11,f12,f13,0])
+            else:
+                songs.append([f0,f1,f2,f3,f4,f5,f6,f7,f8,f8,f10,f11,f12,f13,1])
 
-    if mood == 'happy':
-        for i in range(0, len(happy_songs)):
-            songs.append((happy_songs[i], 1))
-        for i in range(0, len(sad_songs)):
-            songs.append((sad_songs[i], 0))
-
-    elif mood == 'sad':
-        for i in range(0, len(happy_songs)):
-            songs.append((happy_songs[i], 0))
-        for i in range(0, len(sad_songs)):
-            songs.append((sad_songs[i], 1))
 
     S, W, potential_songs = SVCA.IVP(songs, .1)
-    tv1 = get_taste_vector(potential_songs)
-    if mood == 'happy':
-        tv2 = get_taste_vector(happy_songs)
-    elif mood == 'sad':
-        tv2 = get_taste_vector(happy_songs)
-    tv = (tv1 + tv2) / 2
+    tv = get_taste_vector(potential_songs)
+    target_dictionary={'target_acousticness': tv[13],
+        'target_danceability': tv[0],
+        'target_duration_ms': tv[2],
+        'target_energy': tv[2],
+        'target_instrumentalness': tv[3],
+        'target_key': tv[4],
+        'target_liveness': tv[5],
+        'target_loudness': tv[6],
+        'target_mode': tv[7],
+        'target_popularity': tv[8],
+        'target_speechiness': tv[9],
+        'target_tempo': tv[10],
+        'target_time_signature': tv[11],
+        'target_valence': tv[12]}
     # Return the songs grouped by mood
-    return potential_songs, tv
+    return potential_songs, target_dictionary
 
 
 def get_taste_vector(taste_data):
@@ -172,10 +189,10 @@ def get_recommendations(session, mood: str):
     For each of the tunable track attributes (below) a target value may be provided.
     Tracks with the attribute values nearest to the target values will be preferred
     """
-    Data, tv = group_songs_by_mood(session.get('user_id'), mood)
+    Data, target_dictionary = group_songs_by_mood(session.get('user_id'), mood)
     # this gets the max and min values of the features
-    max_values = np.amax(np.array(Data), axis=0)
-    min_values = min_values = np.amin(min, axis=0)
+    #max_values = np.amax(np.array(Data), axis=0)
+    #min_values = min_values = np.amin(min, axis=0)
 
     # TODO: Populate seed_artists, seed_genres, & seed_tracks with calls to Spotify API
     seed_artists, seed_genres, seed_tracks = None, None, None
