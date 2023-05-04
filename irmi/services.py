@@ -6,6 +6,40 @@ from collections import Counter
 
 from irmi import SVCA
 from irmi.authenticate import make_get_request
+import spotipy
+from spotipy.oauth2 import SpotifyOAuth
+
+def group_songs_by_mood(username):
+    # Initialize the Spotify API client
+    scope = "user-library-read"
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, username=username))
+
+    # Retrieve the user's liked songs
+    tracks = sp.current_user_saved_tracks(limit=50)['items']
+
+    # Get the audio features of each song
+    audio_features = sp.audio_features([track['track']['id'] for track in tracks])
+
+    # Group the songs by mood
+    happy_songs = []
+    sad_songs = []
+    energetic_songs = []
+
+    for track, features in zip(tracks, audio_features):
+        valence = features['valence']
+        energy = features['energy']
+        tempo = features['tempo']
+
+        # Classify the song into a mood category
+        if valence > 0.7 and energy > 0.6 and tempo > 120:
+            energetic_songs.append(track)
+        elif valence < 0.3 and energy < 0.4 and tempo < 100:
+            sad_songs.append(track)
+        else:
+            happy_songs.append(track)
+
+    # Return the songs grouped by mood
+    return {'happy': happy_songs, 'sad': sad_songs, 'energetic': energetic_songs}
 
 
 def get_taste_vector(taste_data):
@@ -142,6 +176,10 @@ def get_recommendations(session,
     :param limit:
     :return:
     """
+
+    Data=group_songs_by_mood(session.get('user_id'))
+
+
     # TODO: Populate seed_artists, seed_genres, & seed_tracks with calls to Spotify API
     seed_artists, seed_genres, seed_tracks = None, None, None
 
