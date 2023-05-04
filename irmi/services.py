@@ -3,9 +3,11 @@ import logging
 import numpy as np
 import requests
 from collections import Counter
+import random
 
 from irmi import SVCA
 from irmi.authenticate import make_get_request
+from utils import get_items_from_api
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
@@ -189,35 +191,35 @@ def get_recommendations(session, mood: str):
     For each of the tunable track attributes (below) a target value may be provided.
     Tracks with the attribute values nearest to the target values will be preferred
     """
-    Data, target_dictionary = group_songs_by_mood(session.get('user_id'), mood)
+    Data, target_dict = group_songs_by_mood(session.get('user_id'), mood)
     # this gets the max and min values of the features
     #max_values = np.amax(np.array(Data), axis=0)
     #min_values = min_values = np.amin(min, axis=0)
 
     # TODO: Populate seed_artists, seed_genres, & seed_tracks with calls to Spotify API
-    seed_artists, seed_genres, seed_tracks = None, None, None
+    seeds = PopulateSeeds(session)
 
     url = 'https://api.spotify.com/v1/recommendations'
     params = {
-        'seed_artists': ','.join(seed_artists),
-        'seed_genres': ','.join(seed_genres),
-        'seed_tracks': ','.join(seed_tracks),
+        'seed_artists': ','.join(seeds.artists),
+        'seed_genres': ','.join(seeds.genres),
+        'seed_tracks': ','.join(seeds.tracks),
         'limit': 50,
         'market': 'US',
-        'target_acousticness': target_acousticness,
-        'target_danceability': target_danceability,
-        'target_duration_ms': target_duration_ms,
-        'target_energy': target_energy,
-        'target_instrumentalness': target_instrumentalness,
-        'target_key': target_key,
-        'target_liveness': target_liveness,
-        'target_loudness': target_loudness,
-        'target_mode': target_mode,
-        'target_popularity': target_popularity,
-        'target_speechiness': target_speechiness,
-        'target_tempo': target_tempo,
-        'target_time_signature': target_time_signature,
-        'target_valence': target_valence
+        'target_acousticness': target_dict['target_acousticness'],
+        'target_danceability': target_dict['target_danceability'],
+        'target_duration_ms': target_dict['target_duration_ms'],
+        'target_energy': target_dict['target_energy'],
+        'target_instrumentalness': target_dict['target_instrumentalness'],
+        'target_key': target_dict['target_key'],
+        'target_liveness': target_dict['target_liveness'],
+        'target_loudness': target_dict['target_loudness'],
+        'target_mode': target_dict['target_mode'],
+        'target_popularity': target_dict['target_popularity'],
+        'target_speechiness': target_dict['target_speechiness'],
+        'target_tempo': target_dict['target_tempo'],
+        'target_time_signature': target_dict['target_time_signature'],
+        'target_valence': target_dict['target_valence']
     }
 
     headers = {'Accept': 'application/json',
@@ -317,3 +319,59 @@ def group_tracks_by_genre(session, recommendations, top_genres):
 
     genre_groups['Other'] = other_genre_group
     return genre_groups
+
+
+class PopulateSeeds:
+    def __init__(self, session):
+        self.artists = self.get_seed_artists(session)
+        self.genres = self.get_seed_genres(session)
+        self.tracks = self.get_seed_tracks(session)
+
+    @staticmethod
+    def get_seed_artists(session, limit=10, seed_limit=5):
+        url = 'https://api.spotify.com/v1/me/top/artists'
+        params = {
+            'time_range': 'medium_term',
+            'limit': limit
+        }
+
+        top_artists = get_items_from_api(session, url, params, 'items')
+
+        if top_artists:
+            random.shuffle(top_artists)
+            seed_artists = [artist['id'] for artist in top_artists[:seed_limit]]
+            return seed_artists
+        else:
+            logging.error('Top Artists not found!')
+            return None
+
+    @staticmethod
+    def get_seed_genres(session, time_range='medium_term', artist_limit=50, seed_limit=5):
+        top_genres = get_user_top_genres(session, time_range, artist_limit)
+
+        if top_genres:
+            genres = list(top_genres.keys())
+            random.shuffle(genres)
+            seed_genres = genres[:seed_limit]
+            return seed_genres
+        else:
+            logging.error('Top Genres not found!')
+            return None
+
+    @staticmethod
+    def get_seed_tracks(session, limit=10, seed_limit=5):
+        url = 'https://api.spotify.com/v1/me/top/tracks'
+        params = {
+            'time_range': 'medium_term',
+            'limit': limit
+        }
+
+        top_tracks = get_items_from_api(session, url, params, 'items')
+
+        if top_tracks:
+            random.shuffle(top_tracks)
+            seed_tracks = [track['id'] for track in top_tracks[:seed_limit]]
+            return seed_tracks
+        else:
+            logging.error('Top Tracks not found!')
+            return None
