@@ -84,12 +84,14 @@ def IVP(data, tz):
         for i in range(0, len(X_train)):
             W = update(W, X_train[i], y_train[i], j, uniqueY)
     c = 0
-
-    for i in range(0, len(X_test)):
-        p = prediction(calc_Wx(W, X_test[i]))
-        if (y_test[i] == p):
+    potential_songs=list()
+    for i in range(0, len(X)):
+        p = prediction(calc_Wx(W, X))
+        if(p==1):
+            potential_songs.append(X)
+        if (y[i] == p):
             c += 1
-    return c / len(X_test),W
+    return c / len(X_test),W,potential_songs
 
 
 

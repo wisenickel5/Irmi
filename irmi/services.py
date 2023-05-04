@@ -9,7 +9,7 @@ from irmi.authenticate import make_get_request
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
-def group_songs_by_mood(username):
+def group_songs_by_mood(username,mood):
     # Initialize the Spotify API client
     scope = "user-library-read"
     sp = spotipy.Spotify(auth_manager=SpotifyOAuth(scope=scope, username=username))
@@ -24,22 +24,38 @@ def group_songs_by_mood(username):
     happy_songs = []
     sad_songs = []
     energetic_songs = []
-
+    songs=[]
     for track, features in zip(tracks, audio_features):
         valence = features['valence']
         energy = features['energy']
         tempo = features['tempo']
 
         # Classify the song into a mood category
-        if valence > 0.7 and energy > 0.6 and tempo > 120:
-            energetic_songs.append(track)
-        elif valence < 0.3 and energy < 0.4 and tempo < 100:
-            sad_songs.append(track)
+        if valence < 0.3 and energy < 0.4 and tempo < 100:
+            sad_songs.append(features)
         else:
-            happy_songs.append(track)
+            happy_songs.append(features)
 
+    if(mood=='happy'):
+        for i in range(0,len(happy_songs)):
+            songs.append(happy_songs[i],1)
+        for i in range(0,len(sad_songs)):
+             songs.append(sad_songs[i], 0)
+    elif(mood=='sad'):
+         for i in range(0, len(happy_songs)):
+             songs.append(happy_songs[i], 0)
+         for i in range(0, len(sad_songs)):
+             songs.append(sad_songs[i], 1)
+
+    S,W,potential_songs=SVCA.IVP(songs,.1)
+    tv1=get_taste_vector(potential_songs)
+    if (mood == 'happy'):
+        tv2=get_taste_vector(happy_songs)
+    elif (mood == 'sad'):
+        tv2 = get_taste_vector(happy_songs)
+    tv=(tv1+tv2)/2
     # Return the songs grouped by mood
-    return {'happy': happy_songs, 'sad': sad_songs, 'energetic': energetic_songs}
+    return potential_songs,tv
 
 
 def get_taste_vector(taste_data):
@@ -148,12 +164,24 @@ def get_liked_track_ids(session):
     return liked_tracks_ids
 
 
-def get_recommendations(session,
-                        target_acousticness: float,     target_danceability: float,         target_duration_ms: float,
-                        target_energy: float,           target_instrumentalness: float,     target_key: float,
-                        target_liveness: float,         target_loudness: float,             target_mode: float,
-                        target_popularity: float,       target_speechiness: float,          target_tempo: float,
-                        target_time_signature: float,   target_valence: float,              limit: int = 50):
+def get_recommendations(session,mood,):
+    target_acousticness: float
+    target_danceability: float
+    target_duration_ms: float
+    target_energy: float
+    target_instrumentalness: float
+    target_key: float
+    target_liveness: float
+    target_loudness: float
+    target_mode: float
+    target_popularity: float
+    target_speechiness: float
+    target_tempo: float
+    target_time_signature: float
+    target_valence: float
+    limit: int = 50
+
+
     """
     Read the following Spotify documentation: https://developer.spotify.com/documentation/web-api/reference/get-recommendations
     For each of the tunable track attributes (below) a target value may be provided.
@@ -177,7 +205,10 @@ def get_recommendations(session,
     :return:
     """
 
-    Data=group_songs_by_mood(session.get('user_id'))
+    Data,tv=group_songs_by_mood(session.get('user_id'),mood)
+    #this gets the max and min values of the features
+    max_values = np.amax(np.array(Data), axis=0)
+    min_values=min_values = np.amin(min, axis=0)
 
 
     # TODO: Populate seed_artists, seed_genres, & seed_tracks with calls to Spotify API

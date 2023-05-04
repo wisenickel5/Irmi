@@ -65,7 +65,7 @@ def callback():
     return redirect(session['previous_url'])
 
 
-@app.route('/recommendations')
+@app.route('/recommendations', methods=['GET', 'POST'])
 def recommendations():
     # Authorization flow for user
     if session.get('token') is None or session.get('token_expiration') is None:
@@ -77,8 +77,10 @@ def recommendations():
         current_user = sv.get_user_information(session)
         session['user_id'] = current_user['id']
 
+    mood = request.form.get('mood')
+
     # TODO: Get recommended tracks. Placing user's liked tracks for now as a placeholder
-    # recommended_track_ids = get_recommendations(session)
+    # recommended_track_ids = get_recommendations(session,mood)
     recommended_track_ids = sv.get_liked_track_ids(session)
     top_genres = sv.get_user_top_genres(session)
 
