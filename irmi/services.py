@@ -6,20 +6,18 @@ from collections import Counter
 import random
 
 from irmi import SVCA
-from irmi.authenticate import make_get_request, CredentialManager
+from irmi.authenticate import make_get_request
 from irmi.utils import get_items_from_api
-import config
-
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth, SpotifyClientCredentials
 
 
-def group_songs_by_mood(sp, mood):
+def group_songs_by_mood(session, mood):
     # Retrieve the user's liked songs
-    tracks = sp.current_user_saved_tracks(limit=50)['items']
+    tracks = get_liked_track_ids(session)
 
     # Get the audio features of each song
-    audio_features = sp.audio_features([track['track']['id'] for track in tracks])
+    audio_features = get_audio_features(session, tracks)
+
+    print([(track, features) for track, features in zip(tracks, audio_features)])
 
     # Group the songs by mood
     happy_songs = []
@@ -39,7 +37,6 @@ def group_songs_by_mood(sp, mood):
         f5 = features['liveness']
         f6 = features['loudness']
         f7 = features['mode']
-        f8 = features['popularity']
         f9 = features['speechiness']
         f10 = features['tempo']
         f11 = features['time_signature']
@@ -47,14 +44,14 @@ def group_songs_by_mood(sp, mood):
         # Classify the song into a mood category
         if mood == 'happy':
             if valence < 0.3 and energy < 0.4 and tempo < 100:
-                songs.append([f0, f1, f2, f3, f4, f5, f6, f7, f8, f8, f10, f11, f12, f13, 1])
+                songs.append([f0, f1, f2, f3, f4, f5, f6, f7, f9, f10, f11, f12, f13, 1])
             else:
-                songs.append([f0, f1, f2, f3, f4, f5, f6, f7, f8, f8, f10, f11, f12, f13, 0])
+                songs.append([f0, f1, f2, f3, f4, f5, f6, f7, f9, f10, f11, f12, f13, 0])
         if mood == 'sad':
             if valence < 0.3 and energy < 0.4 and tempo < 100:
-                songs.append([f0, f1, f2, f3, f4, f5, f6, f7, f8, f8, f10, f11, f12, f13, 0])
+                songs.append([f0, f1, f2, f3, f4, f5, f6, f7, f9, f10, f11, f12, f13, 0])
             else:
-                songs.append([f0, f1, f2, f3, f4, f5, f6, f7, f8, f8, f10, f11, f12, f13, 1])
+                songs.append([f0, f1, f2, f3, f4, f5, f6, f7, f9, f10, f11, f12, f13, 1])
 
     S, W, potential_songs = SVCA.IVP(songs, .1)
     tv = get_taste_vector(potential_songs)
@@ -67,7 +64,6 @@ def group_songs_by_mood(sp, mood):
                          'target_liveness': tv[5],
                          'target_loudness': tv[6],
                          'target_mode': tv[7],
-                         'target_popularity': tv[8],
                          'target_speechiness': tv[9],
                          'target_tempo': tv[10],
                          'target_time_signature': tv[11],
@@ -182,13 +178,30 @@ def get_liked_track_ids(session):
     return liked_tracks_ids
 
 
-def get_recommendations(session, sp, mood: str):
+def get_audio_features(session, track_ids):
+    audio_features = []
+    url = "https://api.spotify.com/v1/audio-features"
+
+    for i in range(0, len(track_ids), 100):
+        ids = ",".join(track_ids[i:i + 100])
+        params = {"ids": ids}
+        payload = make_get_request(session, url, params)
+
+        if "audio_features" not in payload:
+            break
+
+        audio_features.extend(payload["audio_features"])
+
+    return audio_features
+
+
+def get_recommendations(session, mood: str):
     """
     Read the following Spotify documentation: https://developer.spotify.com/documentation/web-api/reference/get-recommendations
     For each of the tunable track attributes (below) a target value may be provided.
     Tracks with the attribute values nearest to the target values will be preferred
     """
-    Data, target_dict = group_songs_by_mood(sp, mood)
+    Data, target_dict = group_songs_by_mood(session, mood)
     # this gets the max and min values of the features
     # max_values = np.amax(np.array(Data), axis=0)
     # min_values = min_values = np.amin(min, axis=0)
@@ -212,7 +225,6 @@ def get_recommendations(session, sp, mood: str):
         'target_liveness': target_dict['target_liveness'],
         'target_loudness': target_dict['target_loudness'],
         'target_mode': target_dict['target_mode'],
-        'target_popularity': target_dict['target_popularity'],
         'target_speechiness': target_dict['target_speechiness'],
         'target_tempo': target_dict['target_tempo'],
         'target_time_signature': target_dict['target_time_signature'],

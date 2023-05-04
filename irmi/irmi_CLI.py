@@ -1,3 +1,4 @@
+import spotipy
 from flask import request, session, redirect, render_template, make_response
 from time import time
 import logging
@@ -7,7 +8,8 @@ from irmi.authenticate import get_token, create_state_key, CredentialManager, Sp
 import irmi.services as sv
 from irmi import app
 
-sp = SpotifyAPIClient.instance()
+
+sp = SpotifyAPIClient.instance().spotify
 
 
 @app.route('/')
@@ -83,7 +85,7 @@ def recommendations():
     print("MOOD: ", mood)
 
     # recommended_track_ids = sv.get_liked_track_ids(session)
-    recommended_track_ids = sv.get_recommendations(session, sp, mood)
+    recommended_track_ids = sv.get_recommendations(session, mood)
     top_genres = sv.get_user_top_genres(session)
 
     if recommended_track_ids and top_genres:

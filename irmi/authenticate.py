@@ -162,7 +162,7 @@ class CredentialManager:
 class SpotifyAPIClient:
     def __init__(self):
         self.cm = CredentialManager.instance()
-        self.sp = self.authenticate_with_spotify()
+        self.spotify = self.authenticate_with_spotify()
 
     def authenticate_with_spotify(self):
         # Authenticate Irmi application with Spotify
