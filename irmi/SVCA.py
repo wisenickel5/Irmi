@@ -61,10 +61,10 @@ def IVP(data, tz):
         temp = list()
         for j in range(0, len(data[0])):
             if j < len(data[0]) - 1:
-                X.append(data[i][j])
+                temp.append(data[i][j])
             else:
                 y.append(data[i][j])
-
+            X.append(temp)
     X = np.array(X)
     y = np.array(y)
     le = LabelEncoder()
