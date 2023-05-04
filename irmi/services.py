@@ -168,7 +168,9 @@ def get_recommendations(session,
         'target_valence': target_valence
     }
 
-    headers = {'Authorization': f'Bearer {session}'}
+    headers = {'Accept': 'application/json',
+               'Content-Type': 'application/json',
+               'Authorization': f"Bearer {session['token']}"}
     response = requests.get(url, headers=headers, params=params)
 
     if response.status_code == 200:
@@ -208,7 +210,7 @@ def get_user_top_genres(session, time_range='medium_term', artist_limit=50):
         return None
 
 
-def get_artist_genres(artist_id, session):
+def get_artist_genres(session, artist_id):
     url = f'https://api.spotify.com/v1/artists/{artist_id}'
     headers = {'Accept': 'application/json',
                'Content-Type': 'application/json',
@@ -221,32 +223,45 @@ def get_artist_genres(artist_id, session):
         return []
 
 
-def group_tracks_by_genre(session, recommendations, user_top_genres):
-    grouped_tracks = {genre: [] for genre in user_top_genres}
-    grouped_tracks['other'] = []  # Add an "other" key to handle tracks that don't belong to user's top genres
+def get_track_info(session, track_id):
+    url = f'https://api.spotify.com/v1/tracks/{track_id}'
 
-    for track in recommendations:
-        track_id = track.get('id')
-        track_name = track.get('name')
-        artist_id = track['artists'][0]['id']
+    headers = {'Accept': 'application/json',
+               'Content-Type': 'application/json',
+               'Authorization': f"Bearer {session['token']}"}
 
-        artist_genres = get_artist_genres(artist_id, session)
-        assigned_genre = None
+    response = requests.get(url, headers=headers)
 
-        for user_genre in user_top_genres:
-            if any(user_genre in artist_genre for artist_genre in artist_genres):
-                assigned_genre = user_genre
+    if response.status_code == 200:
+        return response.json()
+    else:
+        logging.error(f'(get_track_info) Unable to get track info for track ID: {track_id}, Status code: {response.status_code}')
+        return None
+
+
+def group_tracks_by_genre(session, recommendations, top_genres):
+    genre_groups = {genre: [] for genre in top_genres}
+    other_genre_group = []
+
+    print("Recommendations:", recommendations)
+
+    for track_id in recommendations:
+        track = get_track_info(session, track_id)  # Get track information using track ID
+        if not track:
+            continue
+
+        track_genres = get_artist_genres(session, track['artists'][0]['id'])  # Get genres of the first artist
+
+        added_to_group = False
+        for genre in top_genres:
+            if genre in track_genres:
+                genre_groups[genre].append(track)
+                added_to_group = True
                 break
 
-        if not assigned_genre:
-            assigned_genre = 'other'
+        if not added_to_group:
+            other_genre_group.append(track)
 
-        track_metadata = {
-            'id': track_id,
-            'name': track_name,
-            'artist_id': artist_id,
-            'artist_genres': artist_genres
-        }
-        grouped_tracks[assigned_genre].append(track_metadata)
+    genre_groups['Other'] = other_genre_group
+    return genre_groups
 
-    return grouped_tracks
