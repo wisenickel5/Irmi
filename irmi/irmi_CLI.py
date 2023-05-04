@@ -1,6 +1,7 @@
 from flask import request, session, redirect, render_template, make_response
 from time import time
 import logging
+import json
 
 import config
 from irmi.authenticate import get_token, create_state_key, CredentialManager
@@ -96,4 +97,7 @@ def recommendations():
         return render_template('index.html')
 
     elif grouped_recommended_tracks is not None:
-        return render_template('recommendations.html', track_ids=grouped_recommended_tracks)
+        return render_template('recommendations.html',
+                               track_ids=grouped_recommended_tracks,
+                               user_id=session['user_id'],
+                               access_token=session.get('token'))
